@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Drive</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-900 min-h-screen text-white">
+
+  <!-- Navbar -->
+  <nav class="bg-gray-800 px-6 py-4 flex justify-between items-center shadow-md">
+    <h1 class="text-xl font-bold text-indigo-400">📁 My Drive</h1>
+    <a href="/user/logout" class="text-sm text-gray-400 hover:text-white transition">Logout</a>
+  </nav>
+
+  <div class="max-w-4xl mx-auto px-6 py-10">
+
+    <!-- Welcome Message -->
+    <h2 class="text-2xl font-bold text-white mb-6">Welcome, <span class="text-indigo-400"><%= username %></span> 👋</h2>
+
+    <!-- Upload Form -->
+    <div class="bg-gray-800 rounded-xl p-6 mb-8 shadow-lg">
+      <h2 class="text-lg font-semibold mb-4 text-gray-200">Upload File</h2>
+      <form action="/files/upload" method="POST" enctype="multipart/form-data"
+            class="flex flex-col sm:flex-row gap-4 items-center">
+        <input
+          type="file"
+          name="file"
+          required
+          class="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4
+                 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white
+                 hover:file:bg-indigo-700 cursor-pointer bg-gray-700 rounded-lg p-2"/>
+        <button
+          type="submit"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold transition whitespace-nowrap">
+          Upload
+        </button>
+      </form>
+    </div>
+
+    <!-- Files List -->
+    <div class="bg-gray-800 rounded-xl p-6 shadow-lg">
+      <h2 class="text-lg font-semibold mb-6 text-gray-200">Your Files</h2>
+
+      <% if (files.length === 0) { %>
+        <div class="text-center py-16 text-gray-500">
+          <p class="text-5xl mb-4">📂</p>
+          <p class="text-lg">No files uploaded yet</p>
+        </div>
+      <% } else { %>
+
+        <div class="space-y-3">
+          <% files.forEach(file => { %>
+
+            <!-- File Card -->
+            <div class="flex items-center justify-between bg-gray-700 rounded-lg px-4 py-3 hover:bg-gray-600 transition">
+
+              <!-- File Info -->
+              <div class="flex items-center gap-3 overflow-hidden">
+                <span class="text-2xl">
+                  <% if (file.resourceType === 'image') { %>🖼️
+                  <% } else if (file.resourceType === 'video') { %>🎥
+                  <% } else { %>📄<% } %>
+                </span>
+                <div class="overflow-hidden">
+                  <p class="text-sm font-medium text-white truncate"><%= file.name %></p>
+                  <p class="text-xs text-gray-400">
+                    <%= (file.size / 1024).toFixed(1) %> KB &nbsp;•&nbsp;
+                    <%= new Date(file.uploadedAt).toLocaleDateString('en-IN') %>
+                  </p>
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex items-center gap-3 ml-4 shrink-0">
+
+                <!-- View Button -->
+                <button
+                  onclick="openPreview('<%= file.url %>', '<%= file.resourceType %>')"
+                  class="text-xs bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-lg transition">
+                  View
+                </button>
+
+                <!-- Delete -->
+                <form action="/files/delete/<%= file._id %>" method="POST"
+                      onsubmit="return confirm('Delete this file?')">
+                  <button type="submit"
+                          class="text-xs bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition">
+                    Delete
+                  </button>
+                </form>
+
+              </div>
+            </div>
+
+          <% }) %>
+        </div>
+
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Preview Modal -->
+  <div id="previewModal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden">
+    <div class="relative bg-gray-800 rounded-xl p-4 max-w-3xl w-full mx-4 max-h-[90vh] overflow-auto">
+
+      <!-- Close Button -->
+      <button
+        onclick="closePreview()"
+        class="absolute top-3 right-3 bg-red-600 hover:bg-red-700 text-white rounded-full w-8 h-8 flex items-center justify-center text-lg font-bold transition">
+        ✕
+      </button>
+
+      <!-- Preview Content -->
+      <div id="previewContent" class="mt-6 flex justify-center items-center">
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    function openPreview(url, type) {
+      const modal = document.getElementById('previewModal');
+      const content = document.getElementById('previewContent');
+
+      if (type === 'image') {
+        content.innerHTML = `<img src="${url}" class="max-w-full max-h-[70vh] rounded-lg object-contain" />`;
+      } else if (type === 'video') {
+        content.innerHTML = `<video src="${url}" controls class="max-w-full max-h-[70vh] rounded-lg"></video>`;
+      } else {
+        content.innerHTML = `
+          <div class="text-center py-10">
+            <p class="text-5xl mb-4">📄</p>
+            <p class="text-gray-300 mb-4">Preview available nahi hai is file ka</p>
+            <a href="${url}" target="_blank"
+               class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg transition">
+              Download / Open
+            </a>
+          </div>`;
+      }
+
+      modal.classList.remove('hidden');
+    }
+
+    function closePreview() {
+      const modal = document.getElementById('previewModal');
+      const content = document.getElementById('previewContent');
+      content.innerHTML = '';
+      modal.classList.add('hidden');
+    }
+
+    // Modal ke bahar click karne pe bhi band ho
+    document.getElementById('previewModal').addEventListener('click', function(e) {
+      if (e.target === this) closePreview();
+    });
+  </script>
+
+</body>
+</html>
